@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+</head>
+<body>
+<title>Salvează Pisica</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;900&display=swap">
+<style>
+/* Layout: one portrait game stage (400x720 world units) scaled to fit, letterboxed on a dark felt */
+:root{
+  --felt:#2c2622; --paper:#f6f1e4; --ink:#2b2420; --sun:#ffcf2e; --gold:#f5b81c; --gold-dark:#b9790c; --grass:#7cc35a; --danger:#e2483b;
+  --display:"Baloo 2","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--felt);overflow:hidden;touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;font-family:var(--body)}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#stage{position:relative;background:var(--paper);box-shadow:0 10px 40px rgba(0,0,0,.45);overflow:hidden}
+canvas{display:block;touch-action:none;width:100%;height:100%}
+.btn-round{position:absolute;top:2.2%;right:3%;width:11%;aspect-ratio:1;border-radius:50%;border:3px solid var(--ink);
+  background:var(--sun);color:var(--ink);font:900 1.4em var(--body);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 0 var(--ink);padding:0}
+.btn-round:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.btn-round:focus-visible,.cta:focus-visible{outline:3px solid var(--danger);outline-offset:2px}
+#ov,#menu{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(43,36,32,.45)}
+.card{width:78%;background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:22px 18px 18px;text-align:center;
+  box-shadow:0 8px 0 var(--ink);animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+.card h2{font:2.1em/1.05 var(--display);margin:0 0 8px;color:var(--ink);text-wrap:balance;letter-spacing:.5px}
+.card p{margin:0 0 16px;color:var(--ink);font-size:1.05em;opacity:.8}
+.cta{border:3px solid var(--ink);background:var(--grass);color:var(--ink);font:1.3em var(--display);padding:10px 22px;border-radius:14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--ink);letter-spacing:.5px}
+.cta.alt{background:var(--sun)}
+.cta:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.pill{position:absolute;top:2.8%;left:3.5%;height:4.4%;padding:0 .9em;border-radius:999px;border:0;background:var(--ink);color:var(--sun);
+  font:1.15em var(--display);letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;gap:.4em;max-width:72%;white-space:nowrap}
+.pill:focus-visible,.lv:focus-visible{outline:3px solid var(--danger);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.55em;margin:0 0 16px}
+.lv{aspect-ratio:1;border:3px solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink);font:1.35em var(--display);cursor:pointer;
+  box-shadow:0 3px 0 var(--ink);padding:0;position:relative}
+.lv.done{background:var(--grass)}
+.lv.cur{background:var(--sun)}
+.lv:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.link{display:block;margin:12px auto 0;background:none;border:0;color:var(--ink);font:700 1em var(--body);text-decoration:underline;cursor:pointer;opacity:.75}
+#menu,#shop{z-index:5}
+#shop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(43,36,32,.45)}
+.shopIcon{width:1.1em;height:1.1em;border-radius:50%;background:var(--sun);color:var(--ink);display:flex;align-items:center;justify-content:center;font:900 .8em var(--body);margin-left:.1em}
+.coins:focus-visible{outline:3px solid var(--danger);outline-offset:2px}
+.shopCoins{display:flex;align-items:center;justify-content:center;gap:.4em;font:800 1.15em var(--display);margin:0 0 12px!important;opacity:1!important}
+.pens{display:flex;flex-direction:column;gap:.55em;margin:0 0 14px;text-align:left}
+.pen{display:grid;grid-template-columns:4.6em 1fr auto;gap:.7em;align-items:center;padding:.55em .6em;border:3px solid var(--ink);border-radius:14px;background:var(--paper)}
+.pen.sel{background:#fff1c2}
+.pen canvas{width:4.6em;height:2.4em;display:block}
+.pen h3{margin:0;font:800 1.2em/1 var(--display);color:var(--ink)}
+.pen p{margin:.15em 0 0!important;font-size:.82em!important;line-height:1.25;opacity:.75}
+.pen .thick{font:700 .72em var(--body);letter-spacing:.8px;text-transform:uppercase;opacity:.6}
+.buy{border:3px solid var(--ink);border-radius:11px;padding:.35em .6em;font:800 1em var(--display);cursor:pointer;background:var(--grass);color:var(--ink);
+  box-shadow:0 3px 0 var(--ink);display:flex;align-items:center;gap:.3em;white-space:nowrap}
+.buy.use{background:var(--sun)}
+.buy[disabled]{background:#e4dccb;box-shadow:none;cursor:default;opacity:.8}
+.buy:not([disabled]):active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.buy .coin{width:1em;height:1em}
+.modes{display:flex;gap:.4em;justify-content:center;margin:0 0 6px}
+.mode{border:3px solid var(--ink);border-radius:999px;padding:.25em 1em;font:800 1.05em var(--display);background:var(--paper);color:var(--ink);cursor:pointer}
+.mode.on{background:var(--ink);color:var(--sun)}
+#modeHard.on{background:var(--danger);color:#fff;border-color:var(--ink)}
+.mode[disabled]{opacity:.5;cursor:default}
+.mode:focus-visible{outline:3px solid var(--danger);outline-offset:2px}
+.modeNote{margin:0 0 10px!important;font-size:.85em!important}
+.hard .pill{background:var(--danger);color:#fff}
+.card.menu{width:84%;padding-bottom:16px}
+/* bănuți */
+.coins{border:0;cursor:pointer;position:absolute;top:2.8%;right:17%;height:4.4%;padding:0 .8em 0 .35em;border-radius:999px;background:var(--ink);color:var(--sun);
+  display:flex;align-items:center;gap:.4em;font:800 1.15em var(--display);font-variant-numeric:tabular-nums}
+.coin{width:1.25em;height:1.25em;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe58a,var(--gold) 60%,var(--gold-dark));
+  box-shadow:inset 0 0 0 2px var(--gold-dark);flex:none}
+.coins.bump{animation:bump .5s ease}
+@keyframes bump{30%{transform:scale(1.25)}}
+/* stele */
+.stars{display:flex;justify-content:center;gap:.3em;margin:0 0 6px}
+.star{width:2.6em;height:2.6em}
+.star.mid{transform:translateY(-.5em)}
+.star path{fill:#ddd2bd;stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round}
+.star.on path{fill:var(--gold)}
+.star.on{animation:starIn .45s cubic-bezier(.2,1.8,.4,1) both}
+.star.on:nth-child(2){animation-delay:.15s}.star.on:nth-child(3){animation-delay:.3s}
+@keyframes starIn{from{transform:scale(0) rotate(-40deg)}}
+.star.mid.on{animation-name:starInMid}
+@keyframes starInMid{from{transform:translateY(-.5em) scale(0) rotate(-40deg)}to{transform:translateY(-.5em)}}
+.reward{display:flex;align-items:center;justify-content:center;gap:.4em;font:800 1.3em var(--display);color:var(--ink);margin:0 0 12px}
+.lv small{position:absolute;left:0;right:0;bottom:.18em;font:700 .45em var(--body);letter-spacing:1px;color:var(--ink)}
+.lv{padding-bottom:.35em}
+@media (prefers-reduced-motion:reduce){.star.on,.coins.bump{animation:none}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}}
+</style>
+
+<div id="wrap">
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <button class="pill" id="levelsBtn" aria-label="Alege nivelul"></button>
+    <button class="coins" id="coins" aria-label="Bănuți. Deschide magazinul"><span class="coin"></span><span id="coinN">0</span><span class="shopIcon" aria-hidden="true">+</span></button>
+    <div id="shop" hidden>
+      <div class="card menu">
+        <h2>Magazin</h2>
+        <p class="shopCoins"><span class="coin"></span><span id="shopCoinN">0</span> bănuți</p>
+        <div class="pens" id="pens"></div>
+        <button class="cta alt" id="shopClose">Înapoi la joc</button>
+      </div>
+    </div>
+    <button class="btn-round" id="restart" aria-label="Reia nivelul">↻</button>
+    <div id="menu" hidden>
+      <div class="card menu">
+        <h2>Niveluri</h2>
+        <div class="modes" role="tablist">
+          <button class="mode" id="modeNormal" role="tab">Normal</button>
+          <button class="mode" id="modeHard" role="tab">Greu</button>
+        </div>
+        <p class="modeNote" id="modeNote"></p>
+        <div class="grid" id="grid"></div>
+        <button class="cta alt" id="menuClose">Înapoi la joc</button>
+      </div>
+    </div>
+    <div id="ov" hidden>
+      <div class="card">
+        <div class="stars" id="ovStars" hidden></div>
+        <h2 id="ovTitle"></h2>
+        <p id="ovText"></p>
+        <div class="reward" id="ovReward" hidden></div>
+        <button class="cta" id="ovBtn"></button>
+        <button class="link" id="ovLevels">Alege alt nivel</button>
+        <button class="link" id="ovShop">Magazin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+(() => {
+const {Engine, Bodies, Body, Composite, Query, Events, Vertices, Constraint} = Matter;
+
+// ---------- Setări ----------
+const W = 400, H = 720;
+const TIME_TO_WIN = 5;      // secunde de supraviețuit
+const WASP_COUNT = 6;
+let THICK = 10;             // grosimea liniei desenate (depinde de instrumentul ales)
+const INK_BONUS = 1.1;      // cerneala ține cu 10% mai mult decât valoarea din nivel
+let inkMax = 0;
+
+// ---------- Instrumente de desen (magazin) ----------
+// mai gros = mai greu (viespile îl ridică mai greu), dar intră mai greu în locuri strâmte
+const PENS = [
+  { id:'pix',     name:'Pix',     thick:6,  price:40,  color:'#1f4fa8', desc:'Cel mai subțire. Precis, dar ușor de ridicat.' },
+  { id:'creion',  name:'Creion',  thick:10, price:0,   color:'#3d3a37', desc:'Grosime normală. Îl ai de la început.' },
+  { id:'carioca', name:'Carioca', thick:14, price:150, color:'#d6402f', desc:'Mai groasă și mai grea decât creionul.' },
+  { id:'pensula', name:'Pensulă', thick:19, price:400, color:'#2b2420', desc:'Cea mai groasă. Viespile o ridică foarte greu.' },
+];
+let ownedPens = ['creion'], penId = 'creion';
+try {
+  ownedPens = JSON.parse(localStorage.getItem('salveaza-pisica-pixuri') || '["creion"]');
+  penId = localStorage.getItem('salveaza-pisica-pix') || 'creion';
+} catch (e) {}
+if (!ownedPens.includes('creion')) ownedPens.push('creion');
+if (!ownedPens.includes(penId)) penId = 'creion';
+const penById = id => PENS.find(p => p.id === id) || PENS[1];
+const CAT_R = 32, WASP_R = 10;
+const LIFT_F = 0.00432;     // forța cu care ridică o viespe (o formă cu mai multă cerneală e mai grea)
+const THRUST = 0.45;
+const CRATE_PUSH = 0.0095;   // cât de tare împinge o viespe o ladă (de ~2x forța de ridicare)        // accelerația maximă a unei viespi (px/pas²)
+const DT2 = (1000/60) * (1000/60);
+
+// teren: [x,y,w,h] sau {poly:[[x,y],...]} (convex)
+// opționale: spikes (țepi), water (apă), crates (lăzi [cx,cy,lat]), seesaw (balansoar), hives (cuiburi [x,y,parte])
+// teren: [x,y,w,h] sau {poly:[[x,y],...]} (convex)
+// opționale: spikes (țepi), water (apă), crates (lăzi [cx,cy,lat]), wood (platforme de lemn fixe),
+// ice (gheață: teren alunecos), seesaw (balansoar), swing (leagăn pe frânghii),
+// hives (cuiburi [x,y,parte] sau [x,y,parte,tavanY] pentru un cuib agățat sub podea)
+const LEVELS = [
+  { title:'Câmpul', tip:'Teren plat: vin din toate părțile.', terrain:[[0,560,400,160]], cat:[200,528], hives:[[338,150,1]], ink:1150 },
+  { title:'Stâlpul', tip:'Pisica stă pe un stâlp îngust.', terrain:[[0,650,400,70],[160,500,80,150]], cat:[200,468], hives:[[62,150,-1]], ink:1400 },
+  { title:'Fântâna', tip:'O groapă îngustă și adâncă.', terrain:[[0,430,140,290],[260,430,140,290],[140,660,120,60]], cat:[200,628], hives:[[338,150,1]], ink:1150 },
+  { title:'Insula', tip:'Pot veni și de dedesubt!', terrain:[[0,690,400,30],[130,500,140,26]], cat:[200,468], hives:[[62,150,-1]], ink:1200 },
+  { title:'Colțul', tip:'Folosește peretele.', terrain:[[0,300,80,420],[0,620,400,100]], cat:[112,588], hives:[[338,150,1]], ink:1200 },
+  { title:'Gaura din podea', tip:'Cuibul e sub podea! Vin prin gaură.',
+    terrain:[[0,560,230,30],[280,560,120,30],[0,690,400,30]], cat:[170,528], hives:[[330,640,1,590]], ink:1350 },
+  { title:'Țepii', tip:'Dacă pisica cade de pe piedestal, se înțeapă.',
+    terrain:[[0,650,400,70],[160,600,80,50]], spikes:[[0,634,160,16],[240,634,160,16]], cat:[200,568], hives:[[62,150,-1]], ink:1350 },
+  { title:'Două cuiburi', tip:'Platformă în aer: atac din toate părțile.',
+    terrain:[[0,690,400,30]], wood:[[125,560,150,16]], cat:[200,528], hives:[[62,150,-1],[338,150,1]], ink:1600, wasps:8 },
+  { title:'Valea', tip:'Pe pante, formele alunecă la vale.',
+    terrain:[{poly:[[0,430],[175,610],[175,720],[0,720]]},{poly:[[225,610],[400,430],[400,720],[225,720]]},[175,610,50,110]], cat:[200,578], hives:[[338,150,1]], ink:1250 },
+  { title:'Turnul de lăzi', tip:'Pisica stă pe 3 lăzi. Viespile pot dărâma turnul!',
+    terrain:[[0,620,400,100]], crates:[[200,590,60],[200,530,60],[200,470,60]], cat:[200,408], hives:[[62,150,-1]], ink:1300 },
+  { title:'Balansoarul', tip:'Dacă se înclină, pisica alunecă în țepi.',
+    terrain:[[0,690,400,30],{poly:[[176,690],[224,690],[200,601]]}], seesaw:{x:200,y:593,len:250}, spikes:[[0,674,170,16],[230,674,170,16]], cat:[200,554], hives:[[338,150,1]], ink:1500, wasps:5 },
+  { title:'Plutirea', tip:'Pisica plutește! Desenează pe ce să stea.',
+    terrain:[[0,520,50,200],[350,520,50,200],[50,690,300,30]], spikes:[[50,674,300,16]], cat:[200,430], hives:[[62,150,-1]], ink:1450 },
+  { title:'Lacul', tip:'Pisicile urăsc apa. Nu o împinge!',
+    terrain:[[0,590,50,130],[350,590,50,130],[50,690,300,30],[165,560,70,130]], water:[[50,600,115,90],[235,600,115,90]], cat:[200,528], hives:[[338,150,1]], ink:1250 },
+  { title:'Labirintul', tip:'Viespile găsesc drumul prin labirint.',
+    terrain:[[0,640,400,80],[0,300,270,22],[130,410,270,22],[0,520,270,22]], cat:[310,608], hives:[[62,150,-1]], ink:1250, wasps:8 },
+  { title:'Patinoarul', tip:'Gheață: pisica și formele alunecă!',
+    terrain:[[0,690,400,30]], ice:[{poly:[[40,690],[150,560],[250,560],[360,690]]}], spikes:[[0,674,40,16],[360,674,40,16]], cat:[200,528], hives:[[62,150,-1],[338,150,1]], ink:1350, wasps:7 },
+  { title:'Trei cuiburi', tip:'Atac de sus și de jos, prin două găuri.',
+    terrain:[[0,560,110,30],[150,560,100,30],[290,560,110,30],[0,690,400,30]], cat:[200,528], hives:[[62,150,-1],[338,150,1],[200,640,1,590]], ink:1500, wasps:9 },
+  { title:'Leagănul', tip:'Pisica stă pe un leagăn. Nu-l lăsa să se răstoarne!',
+    terrain:[[0,690,400,30]], wood:[[90,292,220,14]], spikes:[[0,674,400,16]], swing:{x:200,y:520,len:190,top:306}, cat:[200,481], hives:[[338,150,1]], ink:1350 },
+  { title:'Tunelul', tip:'Tunel deschis la ambele capete. O singură linie!',
+    terrain:[[0,620,400,100],[60,470,280,30]], cat:[200,588], hives:[[62,150,-1],[338,150,1]], ink:1300, wasps:7 },
+  { title:'Prăpastia', tip:'Pisica stă pe marginea prăpastiei.',
+    terrain:[[0,500,120,220],[320,560,80,160],[120,690,200,30]], spikes:[[120,674,200,16]], cat:[82,468], hives:[[338,150,1]], ink:1250 },
+  { title:'Alunecușul', tip:'Gheață: alunecă tot, chiar și lăzile.',
+    terrain:[[0,690,400,30]], ice:[[40,600,320,24]], crates:[[100,575,50],[300,575,50]], spikes:[[0,674,400,16]], cat:[200,568], hives:[[62,150,-1],[338,150,1]], ink:1300, wasps:7 },
+];
+
+// ---------- Canvas / scalare ----------
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const stage = document.getElementById('stage');
+let scale = 1, dpr = 1;
+function resize(){
+  const wrap = document.getElementById('wrap').getBoundingClientRect();
+  scale = Math.min(wrap.width / W, wrap.height / H);
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  stage.style.width = W*scale + 'px'; stage.style.height = H*scale + 'px';
+  stage.style.fontSize = (14*scale) + 'px';
+  canvas.width = Math.round(W*scale*dpr); canvas.height = Math.round(H*scale*dpr);
+}
+window.addEventListener('resize', resize); resize();
+
+// ---------- Stare joc ----------
+let engine, L, levelIdx = 0, statics, hazards, crates, plank, cat, strokes, wasps, drawing, inkLeft, state, timeLeft, spawnT, spawned, clock = 0, endT = 0, particles = [], shake = 0, loseWhy = 'sting', shapes = [];
+
+// progres (nivelurile terminate), doar în browserul jucătorului
+let done = new Set();
+try { done = new Set(JSON.parse(localStorage.getItem('salveaza-pisica-done-v2') || '[]')); } catch (e) {}
+let bestStars = {}, coins = 0;
+try { bestStars = JSON.parse(localStorage.getItem('salveaza-pisica-stele-v2') || '{}'); coins = +localStorage.getItem('salveaza-pisica-banuti') || 0; } catch (e) {}
+function saveProgress(){ try { localStorage.setItem('salveaza-pisica-stele-v2', JSON.stringify(bestStars)); localStorage.setItem('salveaza-pisica-banuti', String(coins)); } catch (e) {} }
+// stele după cerneala rămasă: cel puțin 75% -> 3, peste 25% -> 2, altfel 1
+const starsFor = left => left >= 0.75 ? 3 : left > 0.25 ? 2 : 1;
+const COINS_FOR = {1:10, 2:20, 3:30};
+function showCoins(bump){
+  document.getElementById('coinN').textContent = coins;
+  const el = document.getElementById('coins');
+  el.setAttribute('aria-label', `${coins} bănuți`);
+  if (bump){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+}
+const STAR_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4l5.9 12.6 13.8 1.6-10.2 9.4 2.8 13.6L24 34.4 11.7 41.2l2.8-13.6L4.3 18.2l13.8-1.6z"/></svg>';
+// ---------- Modul Greu (Game+) ----------
+// aceleași niveluri, viespile au de 2 ori mai multă forță; se deblochează la 45 de stele din modul normal
+const HARD_UNLOCK = 45, HARD_FORCE = 2;
+let hard = false;
+try { hard = localStorage.getItem('salveaza-pisica-greu') === '1'; } catch (e) {}
+const key = i => hard ? 'h' + i : i;               // stelele și progresul se țin separat pe fiecare mod
+const normalStars = () => LEVELS.reduce((sum, _, i) => sum + (bestStars[i] || 0), 0);
+const hardUnlocked = () => normalStars() >= HARD_UNLOCK;
+if (hard && !hardUnlocked()) hard = false;
+const force = () => hard ? HARD_FORCE : 1;
+function setHard(on){
+  hard = on; try { localStorage.setItem('salveaza-pisica-greu', on ? '1' : '0'); } catch (e) {}
+  document.getElementById('stage').classList.toggle('hard', on);
+}
+function markDone(i){ done.add(i); try { localStorage.setItem('salveaza-pisica-done-v2', JSON.stringify([...done])); } catch (e) {} }
+
+function makeStatic(t, label, opts = {}){
+  if (Array.isArray(t)){ const [x,y,w,h] = t; return Bodies.rectangle(x+w/2, y+h/2, w, h, {isStatic:true, friction:0.9, label, ...opts}); }
+  const verts = t.poly.map(([x,y]) => ({x,y}));
+  const b = Bodies.fromVertices(0, 0, [verts], {isStatic:true, friction:0.9, label, ...opts});
+  Body.setPosition(b, Vertices.centre(verts));
+  return b;
+}
+const shapeOf = t => Array.isArray(t) ? [[t[0],t[1]],[t[0]+t[2],t[1]],[t[0]+t[2],t[1]+t[3]],[t[0],t[1]+t[3]]] : t.poly;
+
+function loadLevel(i){
+  levelIdx = i; L = LEVELS[i];
+  engine = Engine.create(); engine.gravity.y = 1;
+  const terrain = L.terrain.map(t => makeStatic(t, 'ground'));
+  const spikes = (L.spikes || []).map(t => makeStatic(t, 'spikes'));
+  const water = (L.water || []).map(t => makeStatic(t, 'water', {isSensor:true}));
+  const wood = (L.wood || []).map(t => makeStatic(t, 'ground'));
+  const ice = (L.ice || []).map(t => makeStatic(t, 'ground', {friction:0.02, frictionStatic:0.05}));
+  statics = [...terrain, ...wood, ...ice, ...spikes];
+  hazards = water;
+  shapes = L.terrain.map(t => { const pts = shapeOf(t); return {pts, top:Math.min(...pts.map(p => p[1]))}; }).sort((a,b) => a.top - b.top);
+  crates = (L.crates || []).map(([x,y,sz]) => { const c = Bodies.rectangle(x, y, sz, sz, {density:0.0025, friction:0.8, frictionStatic:1, label:'crate', chamfer:{radius:3}}); c.plugin.size = sz; return c; });
+  plank = null;
+  const extra = [];
+  if (L.seesaw){
+    const sw = L.seesaw;
+    plank = Bodies.rectangle(sw.x, sw.y, sw.len, 14, {density:0.003, friction:0.9, frictionStatic:1, label:'plank'});
+    plank.plugin.len = sw.len;
+    extra.push(plank, Constraint.create({pointA:{x:sw.x, y:sw.y}, bodyB:plank, pointB:{x:0,y:0}, stiffness:1, length:0}));
+  }
+  if (L.swing){   // scândură agățată în două frânghii
+    const sw = L.swing, h = sw.len/2 - 12;
+    plank = Bodies.rectangle(sw.x, sw.y, sw.len, 14, {density:0.004, friction:0.9, frictionStatic:1, label:'plank', frictionAir:0.02});
+    plank.plugin.len = sw.len;
+    plank.plugin.ropes = [-h, h].map(dx => ({a:{x:sw.x+dx, y:sw.top}, b:{x:dx, y:0}}));
+    for (const r of plank.plugin.ropes)
+      extra.push(Constraint.create({pointA:r.a, bodyB:plank, pointB:r.b, length:sw.y - sw.top, stiffness:0.95, damping:0.05}));
+    extra.push(plank);
+  }
+  cat = Bodies.circle(L.cat[0], L.cat[1], CAT_R, {density:0.003, friction:0.9, frictionStatic:1, restitution:0.05, label:'cat'});
+  Composite.add(engine.world, [...statics, ...hazards, ...crates, ...extra, cat]);
+  Events.on(engine, 'collisionStart', onCollide);
+  strokes = []; wasps = []; drawing = null; particles = []; fieldTick = 0; siege = null; siegePlan = {S:null, mode:0, t:0, x:0, y:0, a:0}; loseWhy = 'sting';
+  THICK = penById(penId).thick;
+  inkMax = Math.round(L.ink * INK_BONUS);
+  inkLeft = inkMax; state = 'draw'; timeLeft = TIME_TO_WIN; spawnT = 0; spawned = 0; endT = 0; shake = 0;
+  buildStaticMask();
+  document.getElementById('ov').hidden = true;
+  document.getElementById('menu').hidden = true;
+  document.getElementById('shop').hidden = true;
+  document.getElementById('levelsBtn').textContent = `${hard ? 'GREU · ' : ''}${i+1} · ${L.title} ▾`;
+}
+const movables = () => [...strokes, ...crates, ...(plank ? [plank] : [])];
+
+// ---------- Utilitare ----------
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const rot = (v,a) => ({x: v.x*Math.cos(a) - v.y*Math.sin(a), y: v.x*Math.sin(a) + v.y*Math.cos(a)});
+
+function resample(pts, step){
+  const out = [pts[0]]; let carry = 0;
+  for (let i=1;i<pts.length;i++){
+    const a = pts[i-1], b = pts[i]; const d = dist(a,b); if (!d) continue;
+    let t = step - carry;
+    while (t <= d){ out.push({x:a.x+(b.x-a.x)*t/d, y:a.y+(b.y-a.y)*t/d}); t += step; }
+    carry = d - (t - step);
+  }
+  const last = pts[pts.length-1];
+  if (dist(out[out.length-1], last) > 1.5) out.push({...last});
+  return out;
+}
+
+// punct liber (nu în teren, nu în apă, nu peste pisică)
+function freeForInk(p){
+  if (p.x < 4 || p.x > W-4 || p.y < 130 || p.y > H-4) return false;
+  if (Query.point([...statics, ...hazards, ...crates, ...(plank ? [plank] : [])], p).length) return false;
+  if (dist(p, cat.position) < CAT_R + THICK/2 + 3) return false;
+  return true;
+}
+// mută o țintă de zbor în afara terenului (urcă deasupra lui)
+function freeTarget(p){
+  let x = clamp(p.x, 14, W-14), y = clamp(p.y, 14, H-14);
+  const i = Math.floor(x/CELL); let j = Math.floor(y/CELL), k = 0;
+  while (j > 0 && staticMask[j*GW+i] && k < 90){ j--; k++; }
+  if (k) y = Math.min(y, (j+.5)*CELL);
+  return {x, y};
+}
+
+// ---------- Desen ----------
+function toWorld(e){
+  const r = canvas.getBoundingClientRect();
+  return {x:(e.clientX - r.left)/scale, y:(e.clientY - r.top)/scale};
+}
+canvas.addEventListener('pointerdown', e => {
+  if (state !== 'draw' || drawing) return;
+  const p = toWorld(e); if (!freeForInk(p)) return;
+  drawing = [p]; canvas.setPointerCapture(e.pointerId); e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  const p = toWorld(e), last = drawing[drawing.length-1];
+  let d = dist(p,last); if (d < 3 || inkLeft <= 0) return;
+  let q = p;
+  if (d > inkLeft){ q = {x:last.x+(p.x-last.x)*inkLeft/d, y:last.y+(p.y-last.y)*inkLeft/d}; d = inkLeft; }
+  if (!freeForInk(q)) return;
+  if (Query.ray([...statics, ...crates, ...(plank ? [plank] : []), cat], last, q, THICK+2).length) return;
+  drawing.push(q); inkLeft -= d;
+});
+const endDraw = () => { if (drawing) finishStroke(); };
+canvas.addEventListener('pointerup', endDraw);
+canvas.addEventListener('pointercancel', endDraw);
+
+function finishStroke(){
+  const pts = drawing; drawing = null;
+  let len = 0; for (let i=1;i<pts.length;i++) len += dist(pts[i-1],pts[i]);
+  if (pts.length < 2 || len < 14){ inkLeft = inkMax; return; }
+  const rs = resample(pts, 5);
+  const parts = rs.map(p => Bodies.circle(p.x, p.y, THICK/2, {density:0.006 * 10 / THICK}));
+  const body = Body.create({parts, friction:0.75, frictionStatic:1, restitution:0, label:'stroke'});
+  // Matter nu aplică teorema axelor paralele pentru corpuri compuse -> calculăm inerția corect
+  let I = 0;
+  for (const part of body.parts.slice(1)){ const dx = part.position.x-body.position.x, dy = part.position.y-body.position.y; I += part.inertia + part.mass*(dx*dx+dy*dy); }
+  Body.setInertia(body, I);
+  const c = {x:body.position.x, y:body.position.y};
+  const local = rs.map(p => ({x:p.x-c.x, y:p.y-c.y}));
+  const endOf = arr => { const k = Math.min(arr.length-1, 4); const t = {x:arr[0].x-arr[k].x, y:arr[0].y-arr[k].y}; const n = Math.hypot(t.x,t.y)||1; return {p:arr[0], t:{x:t.x/n, y:t.y/n}}; };
+  body.plugin.local = local;
+  body.plugin.pen = penId; body.plugin.thick = THICK;
+  body.plugin.ends = [endOf(local), endOf([...local].reverse())];
+  Composite.add(engine.world, body); strokes.push(body);
+  state = 'play';
+}
+
+function worldEnds(S){
+  return S.plugin.ends.map(e => {
+    const p = rot(e.p, S.angle), t = rot(e.t, S.angle);
+    return {p:{x:p.x+S.position.x, y:p.y+S.position.y}, t};
+  });
+}
+
+// ---------- Viespi ----------
+function spawnWasp(i){
+  const hv = L.hives[i % L.hives.length];
+  const b = Bodies.circle(hv[0] + (Math.random()-.5)*8, hv[1]+30, WASP_R,
+    {density:0.004, frictionAir:0.03, friction:0.05, restitution:0.3, label:'wasp'});
+  b.ai = { side: i%2 ? 1 : -1, stuck:0, best:1e9, noSq:0, sqBest:Infinity, sqT:0, sgBest:Infinity, sgT:0, contactT:0, liftT:0, liftY:0, hold:0, gripS:null, gripK:1, flips:0, push:0, phase:Math.random()*7,
+           speed:5.6 + Math.random()*0.9, lifting:false, face:1 };
+  b.hive = hv;
+  Body.setVelocity(b, {x:(Math.random()-.5)*4, y:2.5});
+  Composite.add(engine.world, b); wasps.push(b);
+}
+
+// ---------- Hartă de drumuri (flow field) ----------
+// Grilă de 5px. Terenul și formele sunt „umflate” cu raza unei viespi, ca o deschizătură
+// să apară doar dacă o viespe chiar încape prin ea. Sunt două hărți:
+//  - normală (cu loc de manevră) și
+//  - „strecurare” (abia încape, se freacă de margini).
+const CELL = 5, GW = W/CELL, GH = H/CELL, N = GW*GH;
+const INF_N = WASP_R - 1;   // margine normală
+const INF_S = WASP_R - 3;   // la strecurare împinge forma desenată cu câțiva pixeli (pământul nu cedează, acolo rămâne INF_N)
+const staticMask = new Uint8Array(N), staticMaskS = new Uint8Array(N);
+const blockedG = new Uint8Array(N), blockedS = new Uint8Array(N);
+const field = new Float32Array(N), squeeze = new Float32Array(N), reach = new Float32Array(N);
+const siegeL = new Float32Array(N), siegeR = new Float32Array(N), queue = new Int32Array(N);
+let fieldTick = 0, siege = null, siegePlan = {S:null, mode:0, t:0, x:0, y:0, a:0};
+function markCircle(mask, x, y, r){
+  const i0 = Math.max(0, Math.floor((x-r)/CELL)), i1 = Math.min(GW-1, Math.floor((x+r)/CELL));
+  const j0 = Math.max(0, Math.floor((y-r)/CELL)), j1 = Math.min(GH-1, Math.floor((y+r)/CELL));
+  for (let j=j0;j<=j1;j++) for (let i=i0;i<=i1;i++){
+    const cx = (i+.5)*CELL - x, cy = (j+.5)*CELL - y; if (cx*cx+cy*cy <= r*r) mask[j*GW+i] = 1; }
+}
+function segDist2(px, py, a, b){
+  const vx = b.x-a.x, vy = b.y-a.y, wx = px-a.x, wy = py-a.y;
+  const t = clamp((wx*vx + wy*vy) / (vx*vx + vy*vy || 1), 0, 1);
+  const dx = wx - vx*t, dy = wy - vy*t; return dx*dx + dy*dy;
+}
+// marchează celulele din interiorul unui poligon sau la mai puțin de r de el
+function markPoly(mask, verts, r){
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const v of verts){ x0 = Math.min(x0,v.x); y0 = Math.min(y0,v.y); x1 = Math.max(x1,v.x); y1 = Math.max(y1,v.y); }
+  const i0 = Math.max(0, Math.floor((x0-r)/CELL)), i1 = Math.min(GW-1, Math.floor((x1+r)/CELL));
+  const j0 = Math.max(0, Math.floor((y0-r)/CELL)), j1 = Math.min(GH-1, Math.floor((y1+r)/CELL));
+  for (let j=j0;j<=j1;j++) for (let i=i0;i<=i1;i++){
+    const id = j*GW+i; if (mask[id]) continue;
+    const p = {x:(i+.5)*CELL, y:(j+.5)*CELL};
+    if (Vertices.contains(verts, p)){ mask[id] = 1; continue; }
+    for (let k=0;k<verts.length;k++) if (segDist2(p.x, p.y, verts[k], verts[(k+1)%verts.length]) <= r*r){ mask[id] = 1; break; }
+  }
+}
+function buildStaticMask(){
+  staticMask.fill(0); staticMaskS.fill(0);
+  for (const b of [...statics, ...hazards]){ markPoly(staticMask, b.vertices, INF_N); markPoly(staticMaskS, b.vertices, INF_N); }
+}
+function cellsNear(q, r, fn){
+  const i0 = Math.max(0, Math.floor((q.x-r)/CELL)), i1 = Math.min(GW-1, Math.floor((q.x+r)/CELL));
+  const j0 = Math.max(0, Math.floor((q.y-r)/CELL)), j1 = Math.min(GH-1, Math.floor((q.y+r)/CELL));
+  for (let j=j0;j<=j1;j++) for (let i=i0;i<=i1;i++){
+    const dx = (i+.5)*CELL - q.x, dy = (j+.5)*CELL - q.y;
+    if (dx*dx + dy*dy <= r*r && fn(j*GW+i)) return true;
+  }
+  return false;
+}
+function buildField(){
+  blockedG.set(staticMask); blockedS.set(staticMaskS);
+  for (const S of strokes) for (let k=1;k<S.parts.length;k++){
+    const p = S.parts[k].position;
+    const th = S.plugin.thick || THICK;
+    markCircle(blockedG, p.x, p.y, th/2 + INF_N); markCircle(blockedS, p.x, p.y, th/2 + INF_S);
+  }
+  for (const b of [...crates, ...(plank ? [plank] : [])]){ markPoly(blockedG, b.vertices, INF_N); markPoly(blockedS, b.vertices, INF_S); }
+
+  // 1) drum larg spre pisică, 2) drum îngust („strecurare”)
+  const cp = cat.position, R = CAT_R + WASP_R + 3;
+  const nearCat = (x,y) => (x-cp.x)**2 + (y-cp.y)**2 <= R*R;
+  bfs(field, blockedG, nearCat);
+  bfs(squeeze, blockedS, nearCat);
+
+  // 3) asediu: doar dacă nici strecurându-se nu ajung
+  siege = null;
+  const pool = strokes.length ? strokes : movables();
+  if (!pool.length) return;
+  let S = pool[0];
+  for (const o of pool) if (dist(o.position, cp) < dist(S.position, cp)) S = o;
+  const gp = gripPoints(S), ks = {};
+  // unde pot ajunge viespile de unde sunt acum (nu are rost să tragă de o parte la care nu ajung)
+  const src = wasps.length ? wasps.map(w => w.position) : L.hives.map(h => ({x:h[0], y:h[1]+30}));
+  bfs(reach, blockedS, (x,y) => src.some(q => (x-q.x)**2 + (y-q.y)**2 <= 16*16));
+  const rr = THICK/2 + WASP_R + 6;
+  const reachable = id => isFinite(reach[id]);
+  let cand = []; for (let k=0;k<gp.length;k++) if (cellsNear(gp[k], rr, reachable)) cand.push(k);
+  if (!cand.length) return;   // nu ajung la nicio parte a formei: siege rămâne null
+  const c = S.position;
+  for (const sd of [-1, 1]){
+    // punctul de prindere: capătul formei din partea viespii (pârghie mare), preferabil jos
+    let gk = cand[0], gs = -1e9;
+    for (const k of cand){ const q = gp[k]; const sc = sd*(q.x - c.x) + 0.6*(q.y - c.y); if (sc > gs){ gs = sc; gk = k; } }
+    ks[sd] = gk;
+    const q = gp[gk];
+    // drumul spre el trece doar prin locuri accesibile (nu „prin” platforme)
+    bfs(sd < 0 ? siegeL : siegeR, blockedS, (x,y) => {
+      if ((x-q.x)**2 + (y-q.y)**2 > (rr+CELL)**2) return false;
+      return isFinite(reach[Math.floor(y/CELL)*GW + Math.floor(x/CELL)]);
+    });
+  }
+  // câte viespi sunt deja pe fiecare parte (ca să se împartă egal și să tragă drept în sus)
+  const cnt = {'-1':0, '1':0};
+  for (const w of wasps) if (w.ai.mode && w.ai.mode.startsWith('asediu')) cnt[w.ai.side]++;
+  siege = {S, ks, cnt};
+}
+function bfs(fld, mask, isSeed){
+  fld.fill(Infinity);
+  let qh = 0, qt = 0;
+  for (let j=0;j<GH;j++) for (let i=0;i<GW;i++){
+    const id = j*GW+i; if (mask[id]) continue;
+    if (isSeed((i+.5)*CELL, (j+.5)*CELL)){ fld[id] = 0; queue[qt++] = id; }
+  }
+  const seeds = qt;
+  while (qh < qt){
+    const id = queue[qh++], i = id%GW, j = (id/GW)|0, nd = fld[id] + 1;
+    for (let dj=-1; dj<=1; dj++) for (let di=-1; di<=1; di++){
+      if (!di && !dj) continue;
+      const ni = i+di, nj = j+dj; if (ni<0||nj<0||ni>=GW||nj>=GH) continue;
+      const nid = nj*GW+ni; if (mask[nid] || fld[nid] <= nd) continue;
+      if (di && dj && (mask[j*GW+ni] || mask[nj*GW+i])) continue;
+      fld[nid] = nd; queue[qt++] = nid;
+    }
+  }
+  return seeds;
+}
+function flowTarget(pos, fld = field){
+  let ci = clamp(Math.floor(pos.x/CELL),0,GW-1), cj = clamp(Math.floor(pos.y/CELL),0,GH-1);
+  let best = -1, bv = Infinity;
+  for (let dj=-3; dj<=3; dj++) for (let di=-3; di<=3; di++){
+    const ni = ci+di, nj = cj+dj; if (ni<0||nj<0||ni>=GW||nj>=GH) continue;
+    const v = fld[nj*GW+ni] + Math.hypot(di,dj)*0.5; if (v < bv){ bv = v; best = nj*GW+ni; } }
+  if (best < 0 || !isFinite(bv)) return null;
+  for (let s=0; s<5; s++){
+    const i = best%GW, j = (best/GW)|0; let nb = best;
+    for (let dj=-1; dj<=1; dj++) for (let di=-1; di<=1; di++){
+      const ni = i+di, nj = j+dj; if (ni<0||nj<0||ni>=GW||nj>=GH) continue;
+      const nid = nj*GW+ni; if (fld[nid] < fld[nb]) nb = nid; }
+    best = nb;
+  }
+  return {x:(best%GW + .5)*CELL, y:(((best/GW)|0) + .5)*CELL};
+}
+
+// lada de sub pisică (cea mai de sus dintre cele pe care stă turnul)
+function supportCrate(){
+  let best = null;
+  for (const c of crates){
+    if (c.position.y <= cat.position.y || Math.abs(c.position.x - cat.position.x) > c.plugin.size) continue;
+    if (!best || c.position.y < best.position.y) best = c;
+  }
+  return best;
+}
+function gripPoints(S){
+  return S.label === 'stroke' ? S.parts.slice(1).map(p => p.position) : S.vertices;
+}
+
+function waspThink(w, dt){
+  const a = w.ai, pos = w.position;
+  let target; const wasLifting = a.lifting; a.lifting = false;
+
+  if (state === 'win'){
+    target = {x:w.hive[0], y:w.hive[1]+20};
+  } else if (state === 'lose'){
+    target = {x:cat.position.x + Math.cos(clock*2+a.phase)*70, y:cat.position.y - 70 + Math.sin(clock*3+a.phase)*25};
+  } else {
+    const cp = cat.position;
+    const route = (a.push > 0) ? null : flowTarget(pos);
+    if (a.push > 0) a.push -= dt;
+
+    const mv = movables();
+    // o viespe care deja ține forma o ține sus până se deschide o gaură mare, ca să treacă celelalte
+    const keepLift = wasLifting && a.gripS && mv.includes(a.gripS) && a.liftT < 3 &&
+                     a.liftY - gripPoints(a.gripS)[a.gripK].y < 55;
+    // drum îngust: îl încearcă, dar dacă nu înaintează (crăpătura e de fapt prea strâmtă) renunță o vreme
+    if (a.noSq > 0) a.noSq -= dt;
+    const sq = (!route && !keepLift && a.noSq <= 0 && a.push <= 0) ? flowTarget(pos, squeeze) : null;
+    if (sq){
+      const v = squeeze[clamp(Math.floor(pos.y/CELL),0,GH-1)*GW + clamp(Math.floor(pos.x/CELL),0,GW-1)];
+      if (v < a.sqBest - 1){ a.sqBest = v; a.sqT = 0; } else a.sqT += dt;
+      if (a.sqT > 1.3){ a.noSq = 2.5; a.sqT = 0; a.sqBest = Infinity; }
+    } else { a.sqBest = Infinity; a.sqT = 0; }
+
+    if (dist(pos, cp) < CAT_R + 30 && !(mv.length && Query.ray(mv, pos, cp, 12).length)){
+      target = cp; a.mode = 'atac';      // e lângă ea: atacă
+    } else if (sq && a.noSq <= 0){
+      target = sq; a.mode = 'strecurare'; // nu e drum larg, dar printr-o crăpătură încape
+      a.stuck = 0; a.liftT = 0;
+    } else if (route && !keepLift){
+      // (o viespe care deja ține forma o ține sus până se deschide o gaură mare, ca să treacă celelalte)
+      target = route; a.mode = 'drum';   // există o deschizătură: urmează drumul
+      if (a.hold > 0 && a.gripS && mv.includes(a.gripS)){ // ține forma ridicată cât se strecoară pe sub ea
+        a.hold -= dt; const gp = gripPoints(a.gripS)[a.gripK];
+        if (dist(pos, gp) < 36){ Body.applyForce(a.gripS, gp, {x:0, y:-LIFT_F*force()}); a.lifting = true; }
+      }
+      a.stuck = 0; a.liftT = 0;
+    } else if (!mv.length || a.push > 0){
+      target = cp;
+    } else {
+      // pisica e închisă complet: asediu. Viespile apucă forma și încearcă s-o ridice,
+      // după un plan de echipă (împărțite / toate pe stânga / toate pe dreapta) care se schimbă dacă forma nu se clintește
+      a.mode = 'asediu' + a.side;
+      let tower = crates.length ? supportCrate() : null;
+      if (tower && !cellsNear(tower.position, tower.plugin.size/2 + WASP_R + 8, id => isFinite(reach[id]))) tower = null;  // nu ajung la ea
+      if (tower){
+        // pisica stă pe lăzi: în loc să ridice forma, viespile împing lada de sub ea ca să dărâme turnul
+        const P = siegePlan, dir = P.mode === 1 ? -1 : 1;     // dir = încotro împing (+1 = spre dreapta)
+        const h = tower.plugin.size/2, c = tower.position;
+        a.mode = 'darama';
+        const spot = {x: c.x - dir*(h + WASP_R + 3), y: c.y - h*0.45};
+        target = spot;
+        if (dist(pos, spot) < 22){
+          const at = {x: c.x - dir*h, y: c.y - h*0.7};
+          Body.applyForce(tower, at, {x: dir*CRATE_PUSH*force(), y: 0});
+          a.lifting = true;
+        }
+      } else if (!siege){ target = cp; } else {
+      const S = siege.S, P = siegePlan;
+      if (P.mode === 0){ if (siege.cnt[a.side] > siege.cnt[-a.side] + 1){ siege.cnt[a.side]--; a.side *= -1; siege.cnt[a.side]++; } }
+      else if (a.side !== P.mode){ siege.cnt[a.side]--; a.side = P.mode; siege.cnt[a.side]++; a.sgT = 0; a.sgBest = Infinity; a.contactT = 0; }
+      const sd = a.side;
+      a.mode = 'asediu' + sd;
+      const gp = gripPoints(S), gk = Math.min(siege.ks[sd], gp.length-1);
+      const e = {p:gp[gk]};
+      const d = dist(pos, e.p);
+      // cel mai apropiat punct al formei (ca să o apuce de unde o atinge)
+      let near = null, nd = Infinity;
+      for (const q of gp){ const dd = dist(pos, q); if (dd < nd){ nd = dd; near = q; } }
+      const sf = sd < 0 ? siegeL : siegeR;
+      if (a.contactT > 0) a.contactT -= dt;
+      const sroute = (d > 45 && a.contactT <= 0) ? flowTarget(pos, sf) : null;
+      if (sroute){                      // ocolește tavane și pereți până ajunge la capătul formei
+        target = sroute;
+        const v = sf[clamp(Math.floor(pos.y/CELL),0,GH-1)*GW + clamp(Math.floor(pos.x/CELL),0,GW-1)];
+        if (v < a.sgBest - 1){ a.sgBest = v; a.sgT = 0; } else a.sgT += dt;
+        if (a.sgT > 1.0){ a.contactT = 1.8; a.sgT = 0; a.sgBest = Infinity; }   // nu mai înaintează: trage de unde poate
+      } else if (d <= 45){
+        target = d > 30 ? {x:e.p.x + sd*14, y:e.p.y + 4} : {x:e.p.x - sd*8, y:e.p.y + 18};
+      } else if (near){
+        // nu ajunge la capăt: se lipește de formă cât mai aproape de el și trage de acolo
+        const k = 1/(nd || 1);
+        target = {x: near.x + (pos.x-near.x)*k*14 + (e.p.x-near.x)*0.15, y: near.y + (pos.y-near.y)*k*14 + (e.p.y-near.y)*0.15};
+      } else target = cp;
+
+      let hold = null, grip = 1;
+      if (d < 40 && pos.y > e.p.y - 28) hold = e.p;                          // bine prinsă, pe sub capăt
+      else if (nd < THICK/2 + WASP_R + 10){ hold = near; grip = 0.5; }       // apucată stângaci, de unde o atinge
+      if (hold){
+        if (a.liftT === 0) a.liftY = e.p.y;
+        a.liftT += dt;
+        // trag mai tare pe partea rămasă jos, ca forma să urce dreaptă și să nu se înțepenească
+        const level = (S.label === 'stroke' && P.mode === 0) ? clamp(1 + sd*S.angle*3, 0.3, 1.7) : 1;
+        // sub același capăt nu încap oricâte: peste ~3-4 viespi pe o parte forța nu mai crește
+        const crowd = Math.min(1, 3.5 / Math.max(1, siege.cnt[sd]));
+        Body.applyForce(S, hold, {x:0, y:-LIFT_F*force()*level*grip*crowd});
+        a.lifting = true; a.gripS = S; a.gripK = gk; a.hold = 0.7;
+      } else if (wasLifting) a.liftT = 0;
+      }
+    }
+  }
+
+  target = freeTarget(target);
+  let dx = target.x - pos.x, dy = target.y - pos.y; const dl = Math.hypot(dx,dy) || 1;
+  const sp = a.speed * Math.min(1, dl/40 + 0.35);
+  let vx = dx/dl*sp, vy = dy/dl*sp + Math.sin(clock*9 + a.phase)*0.5;
+  for (const o of wasps){ if (o === w) continue;
+    const ddx = pos.x - o.position.x, ddy = pos.y - o.position.y, dd = Math.hypot(ddx,ddy);
+    if (dd > 0 && dd < 26){ vx += ddx/dd*1.4; vy += ddy/dd*1.4; } }
+  // nu împinge formele cu corpul (fizica le-ar muta oricât de grele ar fi): se oprește lipită de ele.
+  // forma se mișcă doar când viespile o ridică intenționat.
+  if (a.mode !== 'strecurare'){
+    let cq = null, cd = THICK/2 + WASP_R + 2;
+    for (const S of strokes){
+      const bb = S.bounds; if (pos.x < bb.min.x-20 || pos.x > bb.max.x+20 || pos.y < bb.min.y-20 || pos.y > bb.max.y+20) continue;
+      for (let k=1;k<S.parts.length;k++){ const q = S.parts[k].position, dd = dist(pos, q); if (dd < cd){ cd = dd; cq = q; } }
+    }
+    if (cq){
+      const nx = (cq.x-pos.x)/(cd||1), ny = (cq.y-pos.y)/(cd||1);
+      const vin = vx*nx + vy*ny; if (vin > 0){ vx -= vin*nx; vy -= vin*ny; }
+      const cin = w.velocity.x*nx + w.velocity.y*ny;
+      if (cin > 0) Body.setVelocity(w, {x:w.velocity.x - cin*nx, y:w.velocity.y - cin*ny});
+    }
+  }
+  let fx = (vx - w.velocity.x) * 0.35, fy = (vy - w.velocity.y) * 0.35;
+  const fm = Math.hypot(fx,fy); if (fm > THRUST){ fx *= THRUST/fm; fy *= THRUST/fm; }
+  const g = engine.gravity.y * engine.gravity.scale;
+  Body.applyForce(w, pos, {x: fx*w.mass/DT2, y: fy*w.mass/DT2 - w.mass*g});
+  if (Math.abs(w.velocity.x) > 0.3) a.face = w.velocity.x > 0 ? 1 : -1;
+}
+
+function onCollide(ev){
+  if (state !== 'play') return;
+  for (const p of ev.pairs){
+    const A = p.bodyA.parent, B = p.bodyB.parent;
+    const other = A.label === 'cat' ? B : B.label === 'cat' ? A : null;
+    if (!other) continue;
+    if (other.label === 'wasp'){ lose('sting'); return; }
+    if (other.label === 'spikes'){ lose('spikes'); return; }
+    if (other.label === 'water'){ lose('water'); return; }
+  }
+}
+
+function lose(why = 'sting'){
+  state = 'lose'; endT = 0; shake = 10; loseWhy = why;
+  const col = why === 'water' ? '#5aa9e6' : '#e2483b';
+  for (let i=0;i<14;i++) particles.push({x:cat.position.x, y:cat.position.y, vx:(Math.random()-.5)*6, vy:-Math.random()*5, life:1, c:col, r:3+Math.random()*3});
+}
+function win(){
+  state = 'win'; endT = 0;
+  const cols = ['#ffcf2e','#7cc35a','#e2483b','#5aa9e6','#f4a24a'];
+  for (let i=0;i<60;i++) particles.push({x:W/2 + (Math.random()-.5)*200, y:120, vx:(Math.random()-.5)*7, vy:Math.random()*-4, life:1.6, c:cols[i%5], r:3+Math.random()*3, sq:true});
+}
+
+function showOverlay(){
+  const ov = document.getElementById('ov'), t = document.getElementById('ovTitle'), p = document.getElementById('ovText'), b = document.getElementById('ovBtn');
+  const starsEl = document.getElementById('ovStars'), rewardEl = document.getElementById('ovReward');
+  starsEl.hidden = rewardEl.hidden = state !== 'win';
+  if (state === 'win'){
+    const wasLocked = !hardUnlocked();
+    markDone(key(levelIdx));
+    const n = starsFor(inkLeft / inkMax), got = COINS_FOR[n];
+    bestStars[key(levelIdx)] = Math.max(bestStars[key(levelIdx)] || 0, n);
+    const justUnlocked = wasLocked && hardUnlocked();
+    coins += got; saveProgress(); showCoins(true);
+    starsEl.innerHTML = [0,1,2].map(k => `<span class="star${k===1?' mid':''}${k<n?' on':''}">${STAR_SVG}</span>`).join('');
+    starsEl.setAttribute('aria-label', `${n} din 3 stele`);
+    rewardEl.innerHTML = `<span class="coin"></span>+${got} bănuți`;
+    const last = levelIdx === LEVELS.length-1;
+    t.textContent = 'Pisica e salvată!';
+    p.textContent = justUnlocked ? `Ai strâns ${HARD_UNLOCK} de stele și ai deblocat modul Greu! Îl găsești în meniul de niveluri.`
+      : last ? (hard ? 'Ai terminat și modul Greu. Respect!' : 'Ai terminat toate nivelurile. Ești un scut de nădejde.')
+      : `Ai rezistat ${TIME_TO_WIN} secunde. Mergem mai departe?`;
+    b.textContent = last ? 'Joacă din nou' : 'Nivelul următor';
+    b.className = 'cta';
+    b.onclick = () => loadLevel(last ? 0 : levelIdx+1);
+  } else {
+    const why = {
+      sting:['Au! A înțepat-o!', 'Viespile au găsit o cale sau au ridicat forma. O formă mai groasă e mai grea și o ridică mai greu.'],
+      spikes:['Au, țepii!', 'Pisica a alunecat în țepi. Ai grijă ca forma să nu o împingă de pe loc.'],
+      water:['Pleosc!', 'Pisica a căzut în apă. Ține-o pe uscat.'],
+      fall:['Pisica a căzut!', 'A alunecat în gol. Sprijină-o mai bine.'],
+    }[loseWhy];
+    t.textContent = why[0];
+    p.textContent = why[1];
+    b.textContent = 'Mai încearcă';
+    b.className = 'cta alt';
+    b.onclick = () => loadLevel(levelIdx);
+  }
+  ov.hidden = false;
+}
+document.getElementById('restart').onclick = () => loadLevel(levelIdx);
+function openMenu(){
+  const grid = document.getElementById('grid'); grid.innerHTML = '';
+  const unlocked = hardUnlocked(), tot = normalStars();
+  const mN = document.getElementById('modeNormal'), mH = document.getElementById('modeHard'), note = document.getElementById('modeNote');
+  mN.classList.toggle('on', !hard); mH.classList.toggle('on', hard);
+  mN.setAttribute('aria-selected', String(!hard)); mH.setAttribute('aria-selected', String(hard));
+  mH.innerHTML = unlocked ? 'Greu' : `<span aria-hidden="true">🔒</span> Greu`;
+  mH.disabled = !unlocked;
+  note.textContent = hard ? 'Viespile au de 2 ori mai multă forță.'
+    : unlocked ? `Ai ${tot} stele. Modul Greu e deblocat!` : `Stele: ${tot} / ${HARD_UNLOCK}. La ${HARD_UNLOCK} se deblochează modul Greu.`;
+  LEVELS.forEach((lv, i) => {
+    const b = document.createElement('button');
+    b.className = 'lv' + (i === levelIdx ? ' cur' : done.has(key(i)) ? ' done' : '');
+    const st = bestStars[key(i)] || 0;
+    b.innerHTML = `${i + 1}<small>${'★'.repeat(st)}${'☆'.repeat(3-st)}</small>`; b.title = lv.title;
+    b.setAttribute('aria-label', `Nivelul ${i+1}${hard ? ' (greu)' : ''}: ${lv.title}${done.has(key(i)) ? `, terminat cu ${st} stele` : ''}`);
+    b.onclick = () => loadLevel(i);
+    grid.appendChild(b);
+  });
+  document.getElementById('menu').hidden = false;
+}
+document.getElementById('levelsBtn').onclick = openMenu;
+document.getElementById('modeNormal').onclick = () => { if (hard){ setHard(false); loadLevel(levelIdx); openMenu(); } };
+document.getElementById('modeHard').onclick = () => { if (!hard && hardUnlocked()){ setHard(true); loadLevel(levelIdx); openMenu(); } };
+document.getElementById('ovLevels').onclick = openMenu;
+
+function savePens(){ try { localStorage.setItem('salveaza-pisica-pixuri', JSON.stringify(ownedPens)); localStorage.setItem('salveaza-pisica-pix', penId); } catch (e) {} }
+function selectPen(id){
+  penId = id; savePens();
+  // dacă încă n-ai desenat nimic în nivelul curent, noul instrument se folosește imediat
+  if (state === 'draw' && !drawing && !strokes.length) THICK = penById(id).thick;
+}
+function openShop(){
+  document.getElementById('shopCoinN').textContent = coins;
+  const box = document.getElementById('pens'); box.innerHTML = '';
+  for (const pen of PENS){
+    const own = ownedPens.includes(pen.id), sel = pen.id === penId;
+    const row = document.createElement('div'); row.className = 'pen' + (sel ? ' sel' : '');
+    const cv = document.createElement('canvas'); cv.width = 140; cv.height = 72;
+    const c = cv.getContext('2d'); c.scale(2, 2);
+    const pts = []; for (let x = 8; x <= 62; x += 3) pts.push({x, y:18 + Math.sin(x*0.11)*8});
+    drawPenLine(c, pts, pen.id, pen.thick);
+    const info = document.createElement('div');
+    info.innerHTML = `<h3>${pen.name}</h3><div class="thick">Grosime ${pen.thick}</div><p>${pen.desc}</p>`;
+    const btn = document.createElement('button'); btn.className = 'buy';
+    if (sel){ btn.textContent = 'Folosit'; btn.disabled = true; }
+    else if (own){ btn.textContent = 'Folosește'; btn.classList.add('use'); btn.onclick = () => { selectPen(pen.id); openShop(); }; }
+    else {
+      btn.innerHTML = `<span class="coin"></span>${pen.price}`;
+      if (coins < pen.price){ btn.disabled = true; btn.title = `Îți mai trebuie ${pen.price - coins} bănuți`; btn.setAttribute('aria-label', `${pen.name}: ${pen.price} bănuți, îți mai trebuie ${pen.price - coins}`); }
+      else {
+        btn.setAttribute('aria-label', `Cumpără ${pen.name} cu ${pen.price} bănuți`);
+        btn.onclick = () => { coins -= pen.price; ownedPens.push(pen.id); saveProgress(); showCoins(true); selectPen(pen.id); openShop(); };
+      }
+    }
+    row.append(cv, info, btn); box.appendChild(row);
+  }
+  document.getElementById('shop').hidden = false;
+}
+document.getElementById('coins').onclick = openShop;
+document.getElementById('ovShop').onclick = openShop;
+document.getElementById('shopClose').onclick = () => { document.getElementById('shop').hidden = true; };
+document.getElementById('menuClose').onclick = () => { document.getElementById('menu').hidden = true; };
+
+// ---------- Simulare ----------
+const STEP = 1000/60;
+function step(dt){
+  clock += dt;
+  if (state === 'play'){
+    spawnT += dt;
+    while (spawned < (L.wasps || WASP_COUNT) && spawnT >= spawned*0.08) spawnWasp(spawned++);
+    timeLeft -= dt;
+    if (timeLeft <= 0){ timeLeft = 0; win(); }
+  }
+  if (state === 'play' && (fieldTick++ % 4 === 0)) buildField();
+  if (state === 'play' && siege && siege.S){   // planul de asediu: dacă forma nu s-a clintit, schimbă tactica
+    const P = siegePlan, S = siege.S;
+    if (P.S !== S){ Object.assign(P, {S, mode:0, t:0, x:S.position.x, y:S.position.y, a:S.angle}); }
+    if (wasps.some(w => w.ai.lifting)){
+      P.t += dt;
+      if (P.t > 1.1){
+        const moved = Math.hypot(S.position.x-P.x, S.position.y-P.y) > 6 || Math.abs(S.angle-P.a) > 0.06;
+        if (!moved) P.mode = P.mode === 0 ? -1 : P.mode === -1 ? 1 : 0;
+        Object.assign(P, {t:0, x:S.position.x, y:S.position.y, a:S.angle});
+      }
+    }
+  }
+  for (const w of wasps) waspThink(w, dt);
+  if (plank && L.seesaw && state !== 'draw'){ // balansoarul are un mic arc care îl readuce spre orizontală
+    Body.setAngularVelocity(plank, plank.angularVelocity*0.9 - plank.angle*0.025);
+  }
+  if (state !== 'draw') Engine.update(engine, STEP);   // lumea stă pe loc până termini de desenat
+  for (const w of wasps){ // ține viespile în ecran
+    if (w.position.x < 6 || w.position.x > W-6 || w.position.y < 6)
+      Body.setPosition(w, {x:clamp(w.position.x,6,W-6), y:Math.max(6,w.position.y)});
+  }
+  if (state === 'play'){ // plasă de siguranță pentru înțepătură
+    for (const w of wasps) if (dist(w.position, cat.position) < CAT_R + WASP_R - 1){ lose('sting'); break; }
+    const cp = cat.position;
+    if (state === 'play'){
+      if (cp.y > H + 40 || cp.x < -40 || cp.x > W + 40) lose('fall');
+      else if (hazards.some(h => Vertices.contains(h.vertices, cp))) lose('water');
+    }
+  }
+  if (state === 'win'){ // viespile intră înapoi în cuib
+    for (let i=wasps.length-1;i>=0;i--) if (dist(wasps[i].position, {x:wasps[i].hive[0],y:wasps[i].hive[1]+20}) < 16){ Composite.remove(engine.world, wasps[i]); wasps.splice(i,1); }
+  }
+  for (let i=strokes.length-1;i>=0;i--) if (strokes[i].position.y > H+300){ Composite.remove(engine.world, strokes[i]); strokes.splice(i,1); }
+  for (const p of particles){ p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.life -= dt; }
+  particles = particles.filter(p => p.life > 0);
+  shake *= 0.88;
+  if (state === 'win' || state === 'lose'){
+    endT += dt;
+    if (endT >= (state==='win'?1.1:0.9) && document.getElementById('ov').hidden) showOverlay();
+  }
+}
+
+// ---------- Desen grafic ----------
+// pete deterministe pentru pământ
+const specks = Array.from({length:240}, (_,i) => ({x:(i*97.13)%W, y:(i*53.71)%H, r:6+(i*7%11)}));
+
+function polyPath(pts){ ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0], pts[k][1]); ctx.closePath(); }
+function drawTerrain(){
+  for (const sh of shapes){
+    const pts = sh.pts;
+    polyPath(pts); ctx.fillStyle = '#a8764a'; ctx.fill();
+    ctx.save(); polyPath(pts); ctx.clip();
+    ctx.fillStyle = '#956339';
+    for (const s of specks){ ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r*0.6, 0, 0, 7); ctx.fill(); }
+    // iarbă pe muchiile orientate în sus
+    let area = 0; for (let k=0;k<pts.length;k++){ const a = pts[k], b = pts[(k+1)%pts.length]; area += a[0]*b[1] - b[0]*a[1]; }
+    const sgn = area > 0 ? 1 : -1;
+    const tops = [];
+    for (let k=0;k<pts.length;k++){
+      const a = pts[k], b = pts[(k+1)%pts.length], ex = b[0]-a[0], ey = b[1]-a[1], len = Math.hypot(ex,ey) || 1;
+      const ny = -ex/len * sgn;   // normala exterioară (componenta y)
+      if (ny < -0.5) tops.push([a,b]);
+    }
+    ctx.lineCap = 'butt';
+    for (const [a,b] of tops){
+      ctx.strokeStyle = '#5c9e3e'; ctx.lineWidth = 26; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+      ctx.strokeStyle = '#7cc35a'; ctx.lineWidth = 19; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    }
+    ctx.restore();
+    polyPath(pts); ctx.strokeStyle = '#5c3b22'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#7cc35a';
+    for (const [a,b] of tops){
+      if (Math.abs(a[1]-b[1]) > 2) continue;
+      const x0 = Math.min(a[0],b[0]), x1 = Math.max(a[0],b[0]), y = a[1];
+      for (let gx = x0+10; gx < x1-8; gx += 37){
+        ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx+3, y-7); ctx.lineTo(gx+6, y-1); ctx.lineTo(gx+9, y-6); ctx.lineTo(gx+11, y); ctx.fill();
+      }
+    }
+  }
+}
+
+function drawSpikes(){
+  for (const [x,y,w,h] of (L.spikes || [])){
+    ctx.fillStyle = '#4b535c'; ctx.fillRect(x, y+h-4, w, 4);
+    const n = Math.max(1, Math.round(w/12)), tw = w/n;
+    for (let k=0;k<n;k++){
+      ctx.beginPath(); ctx.moveTo(x+k*tw, y+h-3); ctx.lineTo(x+k*tw+tw/2, y); ctx.lineTo(x+(k+1)*tw, y+h-3); ctx.closePath();
+      ctx.fillStyle = '#b7c0c9'; ctx.fill(); ctx.strokeStyle = '#4b535c'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x+k*tw+tw/2-1, y+3); ctx.lineTo(x+k*tw+tw*0.3, y+h-5); ctx.stroke();
+    }
+  }
+}
+function drawWater(){
+  for (const [x,y,w,h] of (L.water || [])){
+    ctx.beginPath(); ctx.moveTo(x, y+h);
+    for (let wx = x; wx <= x+w; wx += 4) ctx.lineTo(wx, y + Math.sin(wx*0.08 + clock*3)*2.5);
+    ctx.lineTo(x+w, y+h); ctx.closePath();
+    ctx.fillStyle = 'rgba(64,155,226,.62)'; ctx.fill();
+    ctx.strokeStyle = '#d8efff'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let wx = x; wx <= x+w; wx += 4) { const yy = y + Math.sin(wx*0.08 + clock*3)*2.5; wx === x ? ctx.moveTo(wx, yy) : ctx.lineTo(wx, yy); }
+    ctx.stroke();
+  }
+}
+function drawCrates(){
+  for (const c of crates){
+    const sz = c.plugin.size;
+    ctx.save(); ctx.translate(c.position.x, c.position.y); ctx.rotate(c.angle);
+    const h = sz/2;
+    ctx.fillStyle = '#d79b55'; ctx.strokeStyle = '#5c3b22'; ctx.lineWidth = 2.5;
+    ctx.fillRect(-h,-h,sz,sz); ctx.strokeRect(-h,-h,sz,sz);
+    ctx.strokeStyle = '#a86c33'; ctx.lineWidth = 2; ctx.strokeRect(-h+5,-h+5,sz-10,sz-10);
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-h+6,-h+6); ctx.lineTo(h-6,h-6); ctx.moveTo(h-6,-h+6); ctx.lineTo(-h+6,h-6); ctx.stroke();
+    ctx.restore();
+  }
+}
+function drawWood(){
+  for (const [x,y,w,h] of (L.wood || [])){
+    ctx.fillStyle = '#c98b4f'; ctx.strokeStyle = '#5c3b22'; ctx.lineWidth = 2.5;
+    ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = '#a86c33'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x+8, y+h*0.4); ctx.lineTo(x+w*0.45, y+h*0.4); ctx.moveTo(x+w*0.55, y+h*0.65); ctx.lineTo(x+w-8, y+h*0.65); ctx.stroke();
+    ctx.fillStyle = '#5c3b22'; for (const nx of [x+6, x+w-6]){ ctx.beginPath(); ctx.arc(nx, y+h/2, 1.8, 0, 7); ctx.fill(); }
+  }
+}
+function drawIce(){
+  for (const t of (L.ice || [])){
+    const pts = shapeOf(t);
+    polyPath(pts); ctx.fillStyle = '#d4eef9'; ctx.fill();
+    ctx.save(); polyPath(pts); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3;
+    for (let k=0;k<6;k++){ const x0 = 60 + k*55; ctx.beginPath(); ctx.moveTo(x0, 600); ctx.lineTo(x0+30, 570); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(120,180,210,.25)'; ctx.fillRect(0, 640, W, 60);
+    ctx.restore();
+    polyPath(pts); ctx.strokeStyle = '#6aa6c4'; ctx.lineWidth = 2.5; ctx.stroke();
+  }
+}
+function drawPlank(){
+  if (!plank) return;
+  const len = plank.plugin.len;
+  for (const r of (plank.plugin.ropes || [])){
+    const e = rot(r.b, plank.angle);
+    ctx.strokeStyle = '#8a6a43'; ctx.lineWidth = 3; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(r.a.x, r.a.y); ctx.lineTo(plank.position.x + e.x, plank.position.y + e.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.save(); ctx.translate(plank.position.x, plank.position.y); ctx.rotate(plank.angle);
+  ctx.fillStyle = '#c98b4f'; ctx.strokeStyle = '#5c3b22'; ctx.lineWidth = 2.5;
+  ctx.fillRect(-len/2, -7, len, 14); ctx.strokeRect(-len/2, -7, len, 14);
+  ctx.strokeStyle = '#a86c33'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-len/2+8, -1); ctx.lineTo(-20, -1); ctx.moveTo(20, 2); ctx.lineTo(len/2-8, 2); ctx.stroke();
+  ctx.restore();
+  if (L.seesaw){ ctx.fillStyle = '#4b535c'; ctx.beginPath(); ctx.arc(L.seesaw.x, L.seesaw.y, 4, 0, 7); ctx.fill(); }
+}
+
+function drawHive(hv){
+  const [hx,hy,s,ceil] = hv;
+  ctx.strokeStyle = '#6b4a2c'; ctx.lineCap = 'round';
+  if (ceil !== undefined){   // cuib agățat sub podea
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(hx, ceil); ctx.lineTo(hx, hy-40); ctx.stroke();
+  } else {
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(s<0 ? -10 : W+10, hy-58); ctx.quadraticCurveTo(hx, hy-70, hx + s*30, hy-52); ctx.stroke();
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx, hy-60); ctx.lineTo(hx, hy-40); ctx.stroke();
+  }
+  // corpul cuibului (cuib de viespi: hârtie gri-bej, în straturi)
+  const layers = [[0,-34,22,10],[0,-20,32,13],[0,-4,38,15],[0,13,34,14],[0,28,24,11]];
+  for (const [dx,dy,rx,ry] of layers){
+    ctx.fillStyle = '#d9c7a3'; ctx.strokeStyle = '#8e7a58'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(hx+dx, hy+dy, rx, ry, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#b9a47e'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(hx+dx, hy+dy+2, rx*0.75, ry*0.55, 0, 0.2, Math.PI-0.2); ctx.stroke();
+  }
+  ctx.fillStyle = '#2b2420'; ctx.beginPath(); ctx.ellipse(hx, hy+30, 10, 7, 0, 0, 7); ctx.fill();
+}
+
+function linePath(c, pts, dx = 0, dy = 0){ c.beginPath(); c.moveTo(pts[0].x+dx, pts[0].y+dy); for (let i=1;i<pts.length;i++) c.lineTo(pts[i].x+dx, pts[i].y+dy); }
+function drawPenLine(c, pts, pen, th){
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  if (pen === 'pix'){
+    c.strokeStyle = '#1f4fa8'; c.lineWidth = th; linePath(c, pts); c.stroke();
+    c.strokeStyle = '#123476'; c.lineWidth = th*0.4; linePath(c, pts); c.stroke();
+  } else if (pen === 'creion'){
+    c.strokeStyle = '#3d3a37'; c.lineWidth = th; linePath(c, pts); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 1.5; c.setLineDash([3,5]); linePath(c, pts, 0, -th*0.22); c.stroke(); c.setLineDash([]);
+  } else if (pen === 'carioca'){
+    c.strokeStyle = '#d6402f'; c.lineWidth = th; linePath(c, pts); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = th*0.22; linePath(c, pts, 0, -th*0.22); c.stroke();
+  } else { // pensulă: vopsea cu margini neregulate
+    c.strokeStyle = '#2b2420'; c.lineWidth = th; linePath(c, pts); c.stroke();
+    c.strokeStyle = 'rgba(43,36,32,.55)'; c.lineWidth = th*0.35;
+    linePath(c, pts, 0, th*0.42); c.stroke(); linePath(c, pts, 0, -th*0.42); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.14)'; c.lineWidth = 1.2;
+    linePath(c, pts, 0, -th*0.15); c.stroke(); linePath(c, pts, 0, th*0.12); c.stroke();
+  }
+}
+function drawStrokeLocal(pts, pen = penId, th = THICK){ drawPenLine(ctx, pts, pen, th); }
+function drawStrokes(){
+  for (const S of strokes){
+    ctx.save(); ctx.translate(S.position.x, S.position.y); ctx.rotate(S.angle);
+    drawStrokeLocal(S.plugin.local, S.plugin.pen, S.plugin.thick); ctx.restore();
+  }
+  if (drawing && drawing.length > 1) drawStrokeLocal(drawing);
+}
+
+function drawWasp(w){
+  const a = w.ai;
+  ctx.save(); ctx.translate(w.position.x, w.position.y);
+  ctx.scale(a.face, 1);
+  ctx.rotate(clamp(w.velocity.y*0.08*a.face, -0.5, 0.5) + (a.lifting ? -0.35 : 0));
+  // aripi
+  const flap = Math.sin(clock*60 + a.phase);
+  ctx.fillStyle = 'rgba(205,232,255,.75)'; ctx.strokeStyle = 'rgba(60,90,120,.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(-2, -10, 6, 10*(0.55+0.45*Math.abs(flap)), -0.5, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(4, -9, 5, 8*(0.55+0.45*Math.abs(flap)), 0.3, 0, 7); ctx.fill(); ctx.stroke();
+  // ac
+  ctx.fillStyle = '#2b2420'; ctx.beginPath(); ctx.moveTo(-13,-2); ctx.lineTo(-20,1); ctx.lineTo(-13,3); ctx.fill();
+  // abdomen cu dungi
+  ctx.save(); ctx.beginPath(); ctx.ellipse(-4, 0, 10, 7, 0, 0, 7); ctx.clip();
+  ctx.fillStyle = hard ? '#ff8c1a' : '#ffd21f'; ctx.fillRect(-15,-8,22,16);
+  ctx.fillStyle = '#2b2420'; ctx.fillRect(-9,-8,3.5,16); ctx.fillRect(-2.5,-8,3.5,16);
+  ctx.restore();
+  ctx.strokeStyle = '#2b2420'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(-4, 0, 10, 7, 0, 0, 7); ctx.stroke();
+  // talie + cap
+  ctx.fillStyle = '#2b2420'; ctx.beginPath(); ctx.arc(6, 0, 2.5, 0, 7); ctx.fill();
+  ctx.fillStyle = hard ? '#ff8c1a' : '#ffd21f'; ctx.beginPath(); ctx.arc(11, -1, 5.5, 0, 7); ctx.fill(); ctx.stroke();
+  // ochi furios
+  ctx.fillStyle = '#2b2420'; ctx.beginPath(); ctx.arc(13, -2, 1.8, 0, 7); ctx.fill();
+  ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(10, -6); ctx.lineTo(15.5, -3.5); ctx.stroke();
+  // antene
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(12,-6); ctx.quadraticCurveTo(14,-12,18,-12); ctx.stroke();
+  ctx.restore();
+}
+
+function drawCat(){
+  const p = cat.position;
+  let near = 1e9; for (const w of wasps) near = Math.min(near, dist(w.position, p));
+  const mood = state === 'lose' ? 'hurt' : state === 'win' ? 'happy' : near < 120 ? 'scared' : 'calm';
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(cat.angle);
+  if (mood === 'scared') ctx.translate(Math.sin(clock*50)*0.8, 0);
+  const R = CAT_R;
+  // urechi
+  for (const s of [-1,1]){
+    ctx.fillStyle = '#f19a3e'; ctx.strokeStyle = '#2b2420'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(s*28, -12); ctx.lineTo(s*24, -42); ctx.lineTo(s*6, -28); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f7b7b0'; ctx.beginPath(); ctx.moveTo(s*23, -17); ctx.lineTo(s*22, -35); ctx.lineTo(s*11, -27); ctx.closePath(); ctx.fill();
+  }
+  // cap
+  ctx.fillStyle = '#f4a24a'; ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.clip();
+  ctx.fillStyle = '#fff6e8'; ctx.beginPath(); ctx.ellipse(0, 18, 22, 17, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#d97f2a';
+  for (const [x,w] of [[-9,4],[0,5],[9,4]]){ ctx.beginPath(); ctx.ellipse(x, -27, w/2, 9, 0, 0, 7); ctx.fill(); }
+  ctx.fillRect(-R, -4, 9, 3); ctx.fillRect(-R, 3, 8, 3); ctx.fillRect(R-9, -4, 9, 3); ctx.fillRect(R-8, 3, 8, 3);
+  ctx.restore();
+  ctx.strokeStyle = '#2b2420'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.stroke();
+  // ochi
+  ctx.fillStyle = '#2b2420'; ctx.strokeStyle = '#2b2420'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  for (const s of [-1,1]){
+    const ex = s*11, ey = -4;
+    if (mood === 'hurt'){
+      ctx.beginPath(); ctx.moveTo(ex-4,ey-4); ctx.lineTo(ex+4,ey+4); ctx.moveTo(ex+4,ey-4); ctx.lineTo(ex-4,ey+4); ctx.stroke();
+    } else if (mood === 'happy'){
+      ctx.beginPath(); ctx.arc(ex, ey+2, 5, Math.PI*1.1, Math.PI*1.9); ctx.stroke();
+    } else if (mood === 'scared'){
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 6.5, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#2b2420'; ctx.beginPath(); ctx.arc(ex + s*0.5, ey, 2.2, 0, 7); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.ellipse(ex, ey, 3.5, 5, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex+1.2, ey-1.8, 1.3, 0, 7); ctx.fill(); ctx.fillStyle = '#2b2420';
+    }
+  }
+  // nas + gură
+  ctx.fillStyle = '#e88a8f'; ctx.beginPath(); ctx.moveTo(-3.5,7); ctx.lineTo(3.5,7); ctx.lineTo(0,11); ctx.closePath(); ctx.fill();
+  ctx.lineWidth = 1.8; ctx.strokeStyle = '#2b2420';
+  if (mood === 'scared' || mood === 'hurt'){ ctx.beginPath(); ctx.ellipse(0, 17, 4, 4.5, 0, 0, 7); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.arc(-3.5, 12, 3.5, 0.1, Math.PI-0.3); ctx.arc(3.5, 12, 3.5, 0.3, Math.PI-0.1); ctx.stroke(); }
+  // mustăți
+  ctx.lineWidth = 1.2;
+  for (const s of [-1,1]){ ctx.beginPath(); ctx.moveTo(s*12, 11); ctx.lineTo(s*30, 8); ctx.moveTo(s*12, 14); ctx.lineTo(s*29, 16); ctx.stroke(); }
+  if (mood === 'scared'){ ctx.fillStyle = '#7cc7f2'; ctx.beginPath(); ctx.moveTo(24,-22); ctx.quadraticCurveTo(30,-12,24,-10); ctx.quadraticCurveTo(18,-12,24,-22); ctx.fill(); }
+  ctx.restore();
+}
+
+function drawStar(x, y, r, on){
+  ctx.beginPath();
+  for (let k=0;k<10;k++){ const rr = k%2 ? r*0.45 : r, an = -Math.PI/2 + k*Math.PI/5; ctx.lineTo(x + Math.cos(an)*rr, y + Math.sin(an)*rr); }
+  ctx.closePath();
+  ctx.fillStyle = on ? '#f5b81c' : '#ddd2bd'; ctx.fill();
+  ctx.strokeStyle = '#2b2420'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function drawHud(){
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#2b2420';
+  ctx.font = '800 36px "Baloo 2", system-ui, sans-serif'; ctx.fillText('Salvează Pisica!', W/2, 86);
+
+  if (state === 'draw'){
+    // bara de cerneală
+    const bw = 200, bx = W/2 - bw/2, by = 112;
+    roundRect(bx, by, bw, 14, 7); ctx.fillStyle = '#e4dccb'; ctx.fill();
+    roundRect(bx, by, Math.max(14, bw*inkLeft/inkMax), 14, 7); ctx.fillStyle = '#2b2420'; ctx.fill();
+    // stelele de pe bară: se pierd când cerneala scade sub prag (75% și 25%)
+    const left = inkLeft / inkMax;
+    [[0, true], [0.25, left > 0.25], [0.75, left >= 0.75]].forEach(([at, on]) => drawStar(bx + 7 + (bw-14)*at, by + 7, 11, on));
+    ctx.font = '700 12px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#6b5d52'; ctx.fillText('CERNEALĂ', W/2, by+28);
+    if (!drawing){
+      const a = 0.55 + 0.45*Math.sin(clock*4);
+      ctx.globalAlpha = a; ctx.font = '900 17px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#2b2420';
+      ctx.fillText('Desenează o formă ca s-o aperi', W/2, 208);
+      ctx.fillText('de viespi! Ai o singură linie.', W/2, 230);
+      ctx.font = '700 14px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#6b5d52';
+      ctx.fillText('Viespile pot ridica forma. Mai multă cerneală = mai grea.', W/2, 254);
+      ctx.globalAlpha = 1;
+      ctx.font = '900 15px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#b5482c';
+      ctx.fillText(L.tip, W/2, 278);
+      ctx.globalAlpha = 1;
+    }
+  } else {
+    // cronometru
+    const t = Math.ceil(timeLeft), frac = timeLeft / TIME_TO_WIN;
+    ctx.lineWidth = 6; ctx.strokeStyle = '#e4dccb'; ctx.beginPath(); ctx.arc(W/2, 140, 24, 0, 7); ctx.stroke();
+    ctx.strokeStyle = state === 'lose' ? '#e2483b' : '#7cc35a';
+    ctx.beginPath(); ctx.arc(W/2, 140, 24, -Math.PI/2, -Math.PI/2 + Math.PI*2*frac); ctx.stroke();
+    ctx.fillStyle = '#2b2420'; ctx.font = '800 26px "Baloo 2", system-ui, sans-serif'; ctx.fillText(state==='win' ? '✓' : String(t), W/2, 141);
+  }
+}
+
+function render(){
+  ctx.setTransform(scale*dpr, 0, 0, scale*dpr, 0, 0);
+  ctx.fillStyle = '#f6f1e4'; ctx.fillRect(0,0,W,H);
+  ctx.save();
+  if (shake > 0.3) ctx.translate((Math.random()-.5)*shake, (Math.random()-.5)*shake);
+  for (const hv of L.hives) if (hv[3] === undefined) drawHive(hv);
+  drawTerrain(); for (const hv of L.hives) if (hv[3] !== undefined) drawHive(hv);
+  drawIce(); drawWood(); drawSpikes(); drawPlank(); drawCrates(); drawStrokes(); drawCat(); drawWater();
+  for (const w of wasps) drawWasp(w);
+  for (const p of particles){
+    ctx.globalAlpha = clamp(p.life, 0, 1); ctx.fillStyle = p.c;
+    if (p.sq){ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.x*0.1); ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r); ctx.restore(); }
+    else { ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  drawHud();
+}
+
+let last = performance.now(), acc = 0;
+function frame(now){
+  acc += Math.min(100, now - last); last = now;
+  let n = 0;
+  while (acc >= STEP && n < 4){ step(STEP/1000); acc -= STEP; n++; }
+  if (n === 4) acc = 0;
+  render();
+  requestAnimationFrame(frame);
+}
+
+showCoins(false);
+setHard(hard);
+loadLevel(0);
+requestAnimationFrame(frame);
+window.__game = { LEVELS, get siege(){return siege}, get plan(){return siegePlan}, dbg(x,y){const id=Math.floor(y/CELL)*GW+Math.floor(x/CELL);return {f:field[id],s:squeeze[id],r:reach[id],L:siegeL[id],R:siegeR[id],bG:blockedG[id],bS:blockedS[id]}}, get state(){return state}, get wasps(){return wasps}, get strokes(){return strokes}, get cat(){return cat}, loadLevel, step };
+})();
+</script>
+
+</body>
+</html>
